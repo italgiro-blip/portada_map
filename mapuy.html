@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Visualizador SIG | Pro</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link href="https://fonts.googleapis.com/css2?family=Roboto+Condensed:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <header class="map-overlay-header">
+        <div class="header-content">
+            <img src="./imagesuy/uyu.png" alt="Logotipo AECA" class="map-logo">
+            <h1 id="mainTitle">Área de Estadística y Análisis </h1>
+        </div>
+    </header>
+
+    <aside class="controls">
+        <h3 style="color: #D9D9D9; font-size: 14px; letter-spacing: 1px; margin-bottom: 15px;">Parámetros Visuales</h3>
+        <button type="button" id="btnCargarGeoJSON" class="map-button">IMPORTAR CAPA</button>
+        <div class="separator"></div>
+
+        <label>MAPA BASE
+            <select id="baseMapSelect">
+                <option value="streets">OpenStreetMap</option>
+                <option value="satellite">Satélite (Esri)</option>
+            </select>
+        </label>
+
+        <label>MÉTODO ESTATÍSTICO
+            <select id="classificationSelect">
+                <option value="jenks">Optimizar Grupos (Jenks)</option>
+                <option value="equal">Rangos Uniformes (Iguales)</option>
+                <option value="quartiles">Distribución por Frecuencia</option>
+            </select>
+        </label>
+
+        <label>ESQUEMA CROMÁTICO
+            <select id="paletteSelect">
+                <option value="blues" selected>Escala de Azules</option>
+                <option value="reds">Escala de Rojos</option>
+                <option value="purples">Escala de Purpúreos</option>
+                <option value="greens">Escala de Verdes</option>
+            </select>
+        </label>
+
+        <label>ENTIDAD ADMINISTRATIVA
+            <select id="labelSelect">
+                <option value="">Esperando datos...</option>
+            </select>
+        </label>
+
+        <div id="infoBox" class="info-card">
+            <p id="detailNome"><b>Unidad:</b> --</p>
+            <p id="detailTaxa"><b>Valor:</b> --</p>
+        </div>
+    </aside>
+
+    <div class="side-images">
+        <img src="./imagesuy/uyub.png" alt="Imagen Lateral 1" class="side-image">
+        <img src="./imagesuy/uyuc.png" alt="Imagen Lateral 2" class="side-image">
+    </div>
+
+    <div id="map"></div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="scripts.js"></script>
+</body>
+</html>
