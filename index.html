@@ -1,0 +1,1086 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Visor Geográfico | Uruguay</title>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;600;800;900&display=swap" rel="stylesheet">
+    <style>
+        /* ===== VARIABLES DE COLOR URUGUAY ===== */
+        :root {
+            --uy-blue: #0038A8;        /* Azul de la bandera */
+            --uy-blue-dark: #002270;
+            --uy-blue-light: #4A7FD4;
+            --uy-celeste: #7BB3E0;     /* Celeste */
+            --uy-celeste-light: #A8D0F0;
+            --uy-yellow: #FCD116;      /* Amarillo del sol */
+            --uy-yellow-dark: #D4A800;
+            --uy-white: #FFFFFF;
+            --uy-cream: #f4f1e8;
+            --uy-dark: #1a1a1a;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        html { scroll-behavior: smooth; }
+
+        body {
+            min-height: 100vh;
+            width: 100%;
+            font-family: 'Montserrat', sans-serif;
+            overflow-x: hidden;
+            background: var(--uy-cream);
+            position: relative;
+            cursor: none;
+        }
+
+        /* ===== CURSOR PERSONALIZADO ===== */
+        .cursor {
+            position: fixed;
+            width: 12px;
+            height: 12px;
+            background: var(--uy-blue);
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 9999;
+            transition: transform 0.15s ease, width 0.3s ease, height 0.3s ease;
+            mix-blend-mode: difference;
+        }
+        .cursor-ring {
+            position: fixed;
+            width: 40px;
+            height: 40px;
+            border: 2px solid var(--uy-blue);
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 9998;
+            transition: transform 0.25s ease, width 0.3s ease, height 0.3s ease;
+            opacity: 0.6;
+        }
+        .cursor.hover { width: 25px; height: 25px; background: var(--uy-yellow); }
+        .cursor-ring.hover { width: 70px; height: 70px; border-color: var(--uy-yellow); }
+
+        /* ===== PARTÍCULAS CANVAS ===== */
+        #particles {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            z-index: 1;
+            pointer-events: none;
+        }
+
+        /* ===== FONDO: AZUL, BLANCO Y CELESTE ===== */
+        .bg-diagonal {
+            position: fixed;
+            inset: 0;
+            background: linear-gradient(135deg,
+                var(--uy-blue-dark) 0%,
+                var(--uy-blue) 35%,
+                var(--uy-celeste) 55%,
+                var(--uy-white) 100%);
+            background-size: 200% 200%;
+            animation: gradientShift 20s ease infinite;
+            z-index: 0;
+        }
+        @keyframes gradientShift {
+            0%   { background-position: 0% 50%; }
+            50%  { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        /* ===== SOL DE LA BANDERA DE FONDO ===== */
+        .uy-shield-bg {
+    position: fixed;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    width: 70vmin;
+    height: 70vmin;
+    object-fit: contain;      /* NUEVO: mantiene proporción sin deformar */
+    opacity: 0.10;
+    z-index: 1;
+    pointer-events: none;
+    animation: rotateShield 90s linear infinite;
+    filter: drop-shadow(0 0 40px rgba(252,209,22,0.4));
+    user-select: none;        /* NUEVO: evita selección accidental */
+}
+        @keyframes rotateShield {
+            from { transform: translate(-50%, -50%) rotate(0deg); }
+            to   { transform: translate(-50%, -50%) rotate(360deg); }
+        }
+
+        /* ===== ESFERAS FLOTANTES ===== */
+        .orb {
+            position: fixed;
+            border-radius: 50%;
+            filter: blur(80px);
+            z-index: 1;
+            pointer-events: none;
+        }
+        .orb-1 { width: 400px; height: 400px; background: var(--uy-yellow); top: -100px; left: -100px; opacity: 0.25; animation: float1 12s ease-in-out infinite; }
+        .orb-2 { width: 450px; height: 450px; background: var(--uy-blue); bottom: -150px; right: -120px; opacity: 0.4; animation: float2 15s ease-in-out infinite; }
+        .orb-3 { width: 300px; height: 300px; background: var(--uy-celeste-light); top: 40%; left: 45%; opacity: 0.25; animation: float3 10s ease-in-out infinite; }
+
+        @keyframes float1 { 0%,100%{transform:translate(0,0)} 50%{transform:translate(50px,40px)} }
+        @keyframes float2 { 0%,100%{transform:translate(0,0)} 50%{transform:translate(-60px,-30px)} }
+        @keyframes float3 { 0%,100%{transform:translate(0,0) scale(1)} 50%{transform:translate(-40px,50px) scale(1.2)} }
+
+        /* ===== HEADER ===== */
+        .header {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%;
+            padding: 25px 50px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 100;
+            animation: fadeDown 1s ease-out;
+            transition: background 0.3s ease, padding 0.3s ease;
+        }
+        .header.scrolled {
+            background: rgba(255,255,255,0.92);
+            backdrop-filter: blur(15px);
+            padding: 15px 50px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+        }
+        @keyframes fadeDown {
+            from { opacity: 0; transform: translateY(-30px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+
+        .logo-container {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        .logo {
+            width: 70px;
+            height: 70px;
+            object-fit: contain;
+            filter: drop-shadow(0 4px 15px rgba(0,0,0,0.3));
+            transition: transform 0.3s ease;
+        }
+        .logo:hover { transform: scale(1.1) rotate(-5deg); }
+
+        .nav-menu {
+            display: flex;
+            gap: 35px;
+            list-style: none;
+        }
+        .nav-menu a {
+            color: var(--uy-white);
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 0.85rem;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            position: relative;
+            padding: 5px 0;
+            transition: color 0.3s ease;
+            text-shadow: 0 2px 8px rgba(0,0,0,0.3);
+        }
+        .header.scrolled .nav-menu a {
+            color: var(--uy-dark);
+            text-shadow: none;
+        }
+        .nav-menu a::after {
+            content: '';
+            position: absolute;
+            bottom: 0; left: 0;
+            width: 0;
+            height: 2px;
+            background: var(--uy-yellow);
+            transition: width 0.3s ease;
+        }
+        .nav-menu a:hover { color: var(--uy-yellow); }
+        .header.scrolled .nav-menu a:hover { color: var(--uy-blue); }
+        .nav-menu a:hover::after { width: 100%; }
+
+        /* ===== HERO SECTION ===== */
+        .hero {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 120px 50px 80px;
+            position: relative;
+            z-index: 5;
+        }
+
+        .hero-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 60px;
+            align-items: center;
+            max-width: 1400px;
+            width: 100%;
+        }
+
+        /* Columna izquierda: texto */
+        .hero-text {
+            animation: fadeUp 1s ease-out 0.2s both;
+        }
+        @keyframes fadeUp {
+            from { opacity: 0; transform: translateY(40px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: var(--uy-yellow);
+            color: var(--uy-blue-dark);
+            padding: 8px 18px;
+            border-radius: 50px;
+            font-size: 0.75rem;
+            font-weight: 800;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            margin-bottom: 25px;
+            box-shadow: 0 8px 20px rgba(252,209,22,0.5);
+        }
+        .badge-dot {
+            width: 8px;
+            height: 8px;
+            background: var(--uy-blue);
+            border-radius: 50%;
+            animation: pulse 1.5s infinite;
+        }
+        @keyframes pulse {
+            0%,100% { opacity: 1; transform: scale(1); }
+            50%     { opacity: 0.5; transform: scale(1.3); }
+        }
+
+        .title {
+            font-size: clamp(2.5rem, 6vw, 5rem);
+            font-weight: 900;
+            color: var(--uy-white);
+            letter-spacing: -2px;
+            line-height: 1;
+            margin-bottom: 20px;
+            text-transform: uppercase;
+            text-shadow: 
+                0 0 30px rgba(252,209,22,0.4),
+                0 5px 25px rgba(0,0,0,0.4);
+        }
+        .title .accent {
+            color: var(--uy-yellow);
+            position: relative;
+            display: inline-block;
+        }
+        .title .accent::after {
+            content: '';
+            position: absolute;
+            bottom: 5px; left: 0;
+            width: 100%;
+            height: 10px;
+            background: var(--uy-yellow);
+            opacity: 0.25;
+            z-index: -1;
+        }
+
+        .subtitle {
+            font-size: clamp(0.95rem, 1.3vw, 1.15rem);
+            color: rgba(255,255,255,0.95);
+            font-weight: 400;
+            line-height: 1.7;
+            margin-bottom: 40px;
+            max-width: 500px;
+            text-shadow: 0 2px 10px rgba(0,0,0,0.3);
+        }
+
+        /* Botones */
+        .buttons {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+            margin-bottom: 50px;
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 12px;
+            padding: 18px 38px;
+            font-family: 'Montserrat', sans-serif;
+            font-size: 0.9rem;
+            font-weight: 800;
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
+            text-decoration: none;
+            border-radius: 50px;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+            transition: all 0.35s cubic-bezier(0.25, 0.8, 0.25, 1);
+            border: none;
+        }
+
+        .btn-primary {
+            background: var(--uy-yellow);
+            color: var(--uy-blue-dark);
+            box-shadow: 0 10px 30px rgba(252,209,22,0.5);
+        }
+        .btn-primary::before {
+            content: '';
+            position: absolute;
+            top: 0; left: -100%;
+            width: 100%; height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.6), transparent);
+            transition: left 0.6s ease;
+        }
+        .btn-primary:hover::before { left: 100%; }
+        .btn-primary:hover {
+            transform: translateY(-4px);
+            background: var(--uy-white);
+            color: var(--uy-blue);
+            box-shadow: 0 20px 40px rgba(255,255,255,0.5);
+        }
+
+        .btn-secondary {
+            background: transparent;
+            color: var(--uy-white);
+            border: 2px solid var(--uy-white);
+        }
+        .btn-secondary:hover {
+            background: var(--uy-white);
+            color: var(--uy-blue);
+            transform: translateY(-4px);
+        }
+
+        .btn svg {
+            width: 18px;
+            height: 18px;
+            transition: transform 0.3s ease;
+        }
+        .btn:hover svg { transform: translateX(5px); }
+
+        /* Stats */
+        .stats {
+            display: flex;
+            gap: 40px;
+            padding-top: 30px;
+            border-top: 2px solid rgba(255,255,255,0.3);
+        }
+        .stat-item h3 {
+            font-size: 1.8rem;
+            font-weight: 900;
+            color: var(--uy-yellow);
+            margin-bottom: 5px;
+            text-shadow: 0 2px 10px rgba(0,0,0,0.3);
+        }
+        .stat-item p {
+            font-size: 0.75rem;
+            color: rgba(255,255,255,0.9);
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            font-weight: 600;
+        }
+
+        /* Columna derecha: card visual */
+        .hero-visual {
+            position: relative;
+            animation: fadeUp 1s ease-out 0.5s both;
+        }
+
+        .visual-card {
+            background: rgba(255,255,255,0.96);
+            backdrop-filter: blur(20px);
+            border-radius: 30px;
+            padding: 35px;
+            box-shadow:
+                0 30px 60px rgba(0,0,0,0.3),
+                0 0 0 1px rgba(255,255,255,0.5);
+            position: relative;
+            overflow: hidden;
+        }
+        .visual-card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 6px;
+            background: linear-gradient(90deg, var(--uy-blue), var(--uy-white), var(--uy-celeste), var(--uy-yellow));
+            background-size: 200% auto;
+            animation: shine 3s linear infinite;
+        }
+        @keyframes shine { to { background-position: 200% center; } }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+        }
+        .card-title {
+            font-size: 1.1rem;
+            font-weight: 800;
+            color: var(--uy-dark);
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+        .live-indicator {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.7rem;
+            font-weight: 700;
+            color: var(--uy-blue);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        .live-dot {
+            width: 8px;
+            height: 8px;
+            background: var(--uy-yellow);
+            border-radius: 50%;
+            animation: pulse 1.5s infinite;
+        }
+
+        /* Mapa simulado */
+        .mini-map {
+            width: 100%;
+            height: 220px;
+            background:
+                linear-gradient(rgba(0,56,168,0.06) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0,56,168,0.06) 1px, transparent 1px),
+                linear-gradient(135deg, #f8f8f8, #e8e8e8);
+            background-size: 20px 20px, 20px 20px, 100% 100%;
+            border-radius: 15px;
+            position: relative;
+            overflow: hidden;
+            margin-bottom: 25px;
+            border: 1px solid rgba(0,0,0,0.05);
+        }
+        .map-pin {
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            background: var(--uy-blue);
+            border-radius: 50% 50% 50% 0;
+            transform: rotate(-45deg);
+            box-shadow: 0 5px 15px rgba(0,56,168,0.5);
+            animation: pinDrop 2s ease-in-out infinite;
+        }
+        .map-pin::after {
+            content: '';
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            width: 6px; height: 6px;
+            background: var(--uy-yellow);
+            border-radius: 50%;
+        }
+        .pin-1 { top: 30%; left: 25%; animation-delay: 0s; }
+        .pin-2 { top: 55%; left: 60%; animation-delay: 0.5s; }
+        .pin-3 { top: 20%; left: 75%; animation-delay: 1s; }
+        .pin-4 { top: 70%; left: 40%; animation-delay: 1.5s; }
+
+        @keyframes pinDrop {
+            0%,100% { transform: rotate(-45deg) translateY(0); }
+            50%     { transform: rotate(-45deg) translateY(-10px); }
+        }
+
+        /* Filas de información */
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 0;
+            border-bottom: 1px solid rgba(0,0,0,0.06);
+            font-size: 0.85rem;
+        }
+        .info-row:last-child { border-bottom: none; }
+        .info-label {
+            color: #888;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-size: 0.7rem;
+        }
+        .info-value {
+            color: var(--uy-dark);
+            font-weight: 800;
+            font-size: 0.95rem;
+        }
+        .info-value.blue { color: var(--uy-blue); }
+
+        /* Reloj flotante */
+        .clock-badge {
+            position: absolute;
+            top: -20px; right: -20px;
+            background: var(--uy-blue);
+            color: var(--uy-white);
+            padding: 15px 22px;
+            border-radius: 20px;
+            font-weight: 800;
+            font-size: 1.1rem;
+            letter-spacing: 2px;
+            box-shadow: 0 15px 30px rgba(0,0,0,0.3);
+            z-index: 2;
+        }
+        .clock-badge small {
+            display: block;
+            font-size: 0.6rem;
+            color: var(--uy-yellow);
+            letter-spacing: 2px;
+            margin-bottom: 3px;
+            font-weight: 600;
+        }
+
+        /* ===== SECCIÓN FEATURES ===== */
+        .features {
+            padding: 100px 50px;
+            background: var(--uy-cream);
+            position: relative;
+            z-index: 5;
+        }
+        .section-header {
+            text-align: center;
+            max-width: 700px;
+            margin: 0 auto 60px;
+        }
+        .section-tag {
+            color: var(--uy-blue);
+            font-size: 0.8rem;
+            font-weight: 800;
+            letter-spacing: 3px;
+            text-transform: uppercase;
+            margin-bottom: 15px;
+        }
+        .section-title {
+            font-size: clamp(1.8rem, 4vw, 2.8rem);
+            font-weight: 900;
+            color: var(--uy-dark);
+            letter-spacing: -1px;
+            margin-bottom: 15px;
+        }
+        .section-desc {
+            color: #666;
+            font-size: 1rem;
+            line-height: 1.7;
+        }
+
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 30px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .feature-card {
+            background: var(--uy-white);
+            border: 2px solid rgba(0,0,0,0.06);
+            border-radius: 25px;
+            padding: 40px 30px;
+            transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+            position: relative;
+            overflow: hidden;
+        }
+        .feature-card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0;
+            width: 0; height: 4px;
+            background: linear-gradient(90deg, var(--uy-blue), var(--uy-yellow));
+            transition: width 0.4s ease;
+        }
+        .feature-card:hover::before { width: 100%; }
+        .feature-card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 30px 60px rgba(0,56,168,0.15);
+            border-color: rgba(0,56,168,0.2);
+        }
+
+        .feature-icon {
+            width: 60px;
+            height: 60px;
+            background: linear-gradient(135deg, var(--uy-blue), var(--uy-blue-light));
+            border-radius: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 25px;
+            box-shadow: 0 10px 25px rgba(0,56,168,0.3);
+            transition: transform 0.4s ease, background 0.4s ease;
+        }
+        .feature-card:nth-child(even) .feature-icon {
+            background: linear-gradient(135deg, var(--uy-celeste), var(--uy-celeste-light));
+            box-shadow: 0 10px 25px rgba(123,179,224,0.4);
+        }
+        .feature-card:hover .feature-icon {
+            transform: rotate(-8deg) scale(1.1);
+        }
+        .feature-icon svg {
+            width: 30px;
+            height: 30px;
+            color: var(--uy-white);
+        }
+
+        .feature-title {
+            font-size: 1.15rem;
+            font-weight: 800;
+            color: var(--uy-dark);
+            margin-bottom: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .feature-desc {
+            color: #777;
+            font-size: 0.9rem;
+            line-height: 1.6;
+        }
+
+        /* ===== FOOTER ===== */
+        .footer {
+            background: var(--uy-dark);
+            color: var(--uy-white);
+            padding: 40px 50px;
+            text-align: center;
+            position: relative;
+            z-index: 5;
+            border-top: 4px solid var(--uy-blue);
+        }
+        .footer-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+        .footer-logo {
+            font-weight: 900;
+            font-size: 1.2rem;
+            letter-spacing: 2px;
+        }
+        .footer-logo span { color: var(--uy-yellow); }
+        .footer-text {
+            color: rgba(255,255,255,0.6);
+            font-size: 0.8rem;
+            letter-spacing: 1px;
+        }
+        .footer-text strong { color: var(--uy-yellow); }
+
+        /* ===== SCROLL INDICATOR ===== */
+        .scroll-indicator {
+            position: absolute;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 10;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+            color: rgba(255,255,255,0.9);
+            font-size: 0.7rem;
+            font-weight: 600;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            animation: bounce 2s infinite;
+        }
+        .scroll-indicator::after {
+            content: '';
+            width: 2px;
+            height: 30px;
+            background: linear-gradient(to bottom, var(--uy-yellow), transparent);
+        }
+        @keyframes bounce {
+            0%,100% { transform: translateX(-50%) translateY(0); }
+            50%     { transform: translateX(-50%) translateY(8px); }
+        }
+
+        /* ===== RESPONSIVE ===== */
+        @media (max-width: 968px) {
+            .hero-container { grid-template-columns: 1fr; gap: 50px; }
+            .hero-visual { order: -1; }
+            .nav-menu { display: none; }
+            .header { padding: 20px 25px; }
+            .hero { padding: 100px 25px 60px; }
+            .features { padding: 60px 25px; }
+            .footer { padding: 30px 25px; }
+            .stats { gap: 25px; }
+            .stat-item h3 { font-size: 1.4rem; }
+            .clock-badge { top: 10px; right: 10px; padding: 10px 16px; font-size: 0.9rem; }
+            .cursor, .cursor-ring { display: none; }
+            body { cursor: auto; }
+        }
+
+        @media (max-width: 500px) {
+            .title { font-size: 2.2rem; }
+            .buttons { flex-direction: column; }
+            .btn { width: 100%; justify-content: center; }
+            .stats { flex-wrap: wrap; gap: 15px; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Cursor personalizado -->
+    <div class="cursor"></div>
+    <div class="cursor-ring"></div>
+
+    <!-- Canvas de partículas -->
+    <canvas id="particles"></canvas>
+
+    <!-- Fondo diagonal azul-celeste-blanco -->
+    <div class="bg-diagonal"></div>
+
+ 
+    <!-- Sol de la bandera de Uruguay de fondo (PNG) -->
+<img src="img.png" class="uy-shield-bg" alt="Sol de Mayo - Uruguay">
+
+    <!-- Esferas flotantes -->
+    <div class="orb orb-1"></div>
+    <div class="orb orb-2"></div>
+    <div class="orb orb-3"></div>
+
+    <!-- Header -->
+    <header class="header" id="header">
+<div class="logo-container">
+    <img src="logo.png" alt="Bandera de Uruguay" class="logo">
+</div>
+               <nav>
+            <ul class="nav-menu">
+                <li><a href="#home">Inicio</a></li>
+                <li><a href="#features">Recursos</a></li>
+                <li><a href="mapuy.html" target="_blank">Mapa</a></li>
+                <li><a href="#contacto">Contacto</a></li>
+            </ul>
+        </nav>
+    </header>
+
+    <!-- Hero -->
+    <section class="hero" id="home">
+        <div class="hero-container">
+            <!-- Texto -->
+            <div class="hero-text">
+                <div class="badge">
+                    <span class="badge-dot"></span>
+                    Datos Geográficos · Uruguay
+                </div>
+                <h1 class="title">
+                    Visor<br>
+                    <span class="accent">Geográfico</span>
+                </h1>
+                <p class="subtitle">
+                    Explorá Uruguay a través de mapas interactivos.
+                    Datos precisos, visualización en tiempo real y
+                    tecnología SIG moderna para tu análisis.
+                </p>
+
+                <div class="buttons">
+                    <a href="maps.html" target="_blank" rel="noopener noreferrer" class="btn btn-primary">
+                        Abrir Mapa
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                        </svg>
+                    </a>
+                    <a href="#features" class="btn btn-secondary">
+                        Saber Más
+                    </a>
+                </div>
+
+                <div class="stats">
+                    <div class="stat-item">
+                        <h3>19</h3>
+                        <p>Departamentos</p>
+                    </div>
+                    <div class="stat-item">
+                        <h3>3D</h3>
+                        <p>Visualización</p>
+                    </div>
+                    <div class="stat-item">
+                        <h3>24/7</h3>
+                        <p>Disponible</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Visual -->
+            <div class="hero-visual">
+                <div class="clock-badge">
+                    <small>Hora local</small>
+                    <span id="clock">00:00:00</span>
+                </div>
+                <div class="visual-card">
+                    <div class="card-header">
+                        <div class="card-title">Vista del Mapa</div>
+                        <div class="live-indicator">
+                            <span class="live-dot"></span>
+                            En Vivo
+                        </div>
+                    </div>
+
+                    <div class="mini-map">
+                        <div class="map-pin pin-1"></div>
+                        <div class="map-pin pin-2"></div>
+                        <div class="map-pin pin-3"></div>
+                        <div class="map-pin pin-4"></div>
+                    </div>
+
+                    <div class="info-row">
+                        <span class="info-label">Latitud</span>
+                        <span class="info-value">-34.9011° S</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Longitud</span>
+                        <span class="info-value">-56.1645° W</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Estado</span>
+                        <span class="info-value blue">● Activo</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Scroll indicator -->
+        <div class="scroll-indicator">Deslizar</div>
+    </section>
+
+    <!-- Features -->
+    <section class="features" id="features">
+        <div class="section-header">
+            <div class="section-tag">Recursos</div>
+            <h2 class="section-title">Todo lo que necesitás</h2>
+            <p class="section-desc">
+                Tecnología SIG moderna para análisis geográficos precisos
+                y visualizaciones interactivas.
+            </p>
+        </div>
+
+        <div class="features-grid">
+            <div class="feature-card">
+                <div class="feature-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
+                    </svg>
+                </div>
+                <h3 class="feature-title">Mapas Interactivos</h3>
+                <p class="feature-desc">
+                    Hacé zoom, arrastrá y explorá mapas detallados de Uruguay en tiempo real.
+                </p>
+            </div>
+
+            <div class="feature-card">
+                <div class="feature-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4" />
+                    </svg>
+                </div>
+                <h3 class="feature-title">Base de Datos</h3>
+                <p class="feature-desc">
+                    Acceso a extensos conjuntos de datos geográficos e información precisa.
+                </p>
+            </div>
+
+            <div class="feature-card">
+                <div class="feature-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                    </svg>
+                </div>
+                <h3 class="feature-title">Análisis en Tiempo Real</h3>
+                <p class="feature-desc">
+                    Procesamiento rápido y visualización de tus datos geográficos.
+                </p>
+            </div>
+
+            <div class="feature-card">
+                <div class="feature-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                    </svg>
+                </div>
+                <h3 class="feature-title">Seguro y Confiable</h3>
+                <p class="feature-desc">
+                    Máxima seguridad de datos y precisión uruguaya en cada detalle.
+                </p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer" id="contacto">
+        <div class="footer-content">
+            <div class="footer-logo">VISOR<span>GEO</span></div>
+            <div class="footer-text">
+                Proyecto <strong>GIS</strong> · Girotto 2026 · Uruguay
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        // ===== CURSOR PERSONALIZADO =====
+        const cursor = document.querySelector('.cursor');
+        const cursorRing = document.querySelector('.cursor-ring');
+        let mouseX = 0, mouseY = 0;
+        let ringX = 0, ringY = 0;
+
+        document.addEventListener('mousemove', (e) => {
+            mouseX = e.clientX;
+            mouseY = e.clientY;
+            cursor.style.left = mouseX + 'px';
+            cursor.style.top = mouseY + 'px';
+        });
+
+        function animateRing() {
+            ringX += (mouseX - ringX) * 0.15;
+            ringY += (mouseY - ringY) * 0.15;
+            cursorRing.style.left = ringX + 'px';
+            cursorRing.style.top = ringY + 'px';
+            requestAnimationFrame(animateRing);
+        }
+        animateRing();
+
+        document.querySelectorAll('a, button, .feature-card').forEach(el => {
+            el.addEventListener('mouseenter', () => {
+                cursor.classList.add('hover');
+                cursorRing.classList.add('hover');
+            });
+            el.addEventListener('mouseleave', () => {
+                cursor.classList.remove('hover');
+                cursorRing.classList.remove('hover');
+            });
+        });
+
+        // ===== RELOJ EN TIEMPO REAL (hora de Montevideo) =====
+        function updateClock() {
+            const now = new Date();
+            const uyTime = now.toLocaleTimeString('es-UY', {
+                timeZone: 'America/Montevideo',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit',
+                hour12: false
+            });
+            document.getElementById('clock').textContent = uyTime;
+        }
+        updateClock();
+        setInterval(updateClock, 1000);
+
+        // ===== HEADER SCROLL EFFECT =====
+        const header = document.getElementById('header');
+        window.addEventListener('scroll', () => {
+            if (window.scrollY > 50) {
+                header.classList.add('scrolled');
+            } else {
+                header.classList.remove('scrolled');
+            }
+        });
+
+        // ===== PARTÍCULAS =====
+        const canvas = document.getElementById('particles');
+        const ctx = canvas.getContext('2d');
+        let particles = [];
+        let canvasWidth, canvasHeight;
+
+        function resizeCanvas() {
+            canvasWidth = canvas.width = window.innerWidth;
+            canvasHeight = canvas.height = window.innerHeight;
+        }
+        resizeCanvas();
+        window.addEventListener('resize', resizeCanvas);
+
+        class Particle {
+            constructor() {
+                this.reset();
+            }
+            reset() {
+                this.x = Math.random() * canvasWidth;
+                this.y = Math.random() * canvasHeight;
+                this.size = Math.random() * 3 + 1;
+                this.speedX = (Math.random() - 0.5) * 0.4;
+                this.speedY = (Math.random() - 0.5) * 0.4;
+                this.opacity = Math.random() * 0.5 + 0.1;
+                // Mezcla de colores: azul, celeste y amarillo
+                const colors = ['0,56,168', '123,179,224', '252,209,22'];
+                this.color = colors[Math.floor(Math.random() * colors.length)];
+            }
+            update() {
+                this.x += this.speedX;
+                this.y += this.speedY;
+                if (this.x < 0 || this.x > canvasWidth) this.speedX *= -1;
+                if (this.y < 0 || this.y > canvasHeight) this.speedY *= -1;
+            }
+            draw() {
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.fillStyle = `rgba(${this.color},${this.opacity})`;
+                ctx.fill();
+            }
+        }
+
+        function initParticles() {
+            particles = [];
+            const count = Math.min(80, Math.floor(window.innerWidth / 15));
+            for (let i = 0; i < count; i++) {
+                particles.push(new Particle());
+            }
+        }
+        initParticles();
+
+        function connectParticles() {
+            for (let i = 0; i < particles.length; i++) {
+                for (let j = i + 1; j < particles.length; j++) {
+                    const dx = particles[i].x - particles[j].x;
+                    const dy = particles[i].y - particles[j].y;
+                    const distance = Math.sqrt(dx * dx + dy * dy);
+                    if (distance < 120) {
+                        ctx.beginPath();
+                        ctx.strokeStyle = `rgba(252,209,22,${0.12 * (1 - distance / 120)})`;
+                        ctx.lineWidth = 0.5;
+                        ctx.moveTo(particles[i].x, particles[i].y);
+                        ctx.lineTo(particles[j].x, particles[j].y);
+                        ctx.stroke();
+                    }
+                }
+            }
+        }
+
+        function animateParticles() {
+            ctx.clearRect(0, 0, canvasWidth, canvasHeight);
+            particles.forEach(p => {
+                p.update();
+                p.draw();
+            });
+            connectParticles();
+            requestAnimationFrame(animateParticles);
+        }
+        animateParticles();
+
+        // ===== PARALLAX SUAVE EN LAS ORBS =====
+        document.addEventListener('mousemove', (e) => {
+            const x = (e.clientX / window.innerWidth - 0.5) * 20;
+            const y = (e.clientY / window.innerHeight - 0.5) * 20;
+            document.querySelector('.orb-1').style.transform = `translate(${x}px, ${y}px)`;
+            document.querySelector('.orb-2').style.transform = `translate(${-x}px, ${-y}px)`;
+        });
+
+        // ===== SCROLL REVEAL =====
+        const observerOptions = {
+            threshold: 0.1,
+            rootMargin: '0px 0px -50px 0px'
+        };
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.style.opacity = '1';
+                    entry.target.style.transform = 'translateY(0)';
+                }
+            });
+        }, observerOptions);
+
+        document.querySelectorAll('.feature-card').forEach((card, index) => {
+            card.style.opacity = '0';
+            card.style.transform = 'translateY(40px)';
+            card.style.transition = `all 0.6s ease ${index * 0.1}s`;
+            observer.observe(card);
+        });
+    </script>
+</body>
+</html>
