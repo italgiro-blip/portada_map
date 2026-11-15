@@ -2,8 +2,13 @@ document.addEventListener('DOMContentLoaded', () => {
     // 1. MAPA Y CAPAS BASE
     const baseLayers = {
         streets: L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png'),
-        satellite: L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}')
-    };
+        satellite: L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'),
+
+        dark: L.tileLayer(`https://basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png?key=${window.CARTO_KEY}`, {
+        subdomains: 'abcd',
+        maxZoom: 20,
+        attribution: '&copy; OpenStreetMap contributors &copy; CARTO'
+     }),
 
     const map = L.map('map', { zoomControl: false, layers: [baseLayers.streets] }).setView([-32.5228, -55.7658], 7);
     L.control.scale({ imperial: false, position: 'bottomleft' }).addTo(map);
