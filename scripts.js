@@ -13,6 +13,7 @@ satellite: L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Wor
         maxZoom: 20,
         attribution: '&copy; OpenStreetMap contributors &copy; CARTO'
      }),
+        }; 
 
     const map = L.map('map', { zoomControl: false, layers: [baseLayers.streets] }).setView([-32.5228, -55.7658], 7);
     L.control.scale({ imperial: false, position: 'bottomleft' }).addTo(map);
